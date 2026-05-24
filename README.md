@@ -67,10 +67,3 @@ Notes about keypoints
 Customizing the conversion
 - Edit the top of `convert_dataset.py` to change `JSON_PATH`, `SRC_IMAGES_DIR`, `OUTPUT_DATASET_DIR`, or `TRAIN_RATIO`.
 - The script matches keypoints to boxes by containment first, then by proximity to box centers as a fallback.
-
-If you want me to
-- generate a `requirements.txt` from your environment,
-- add an example `data.yaml` file to the repo, or
-- enable `git lfs` tracking for large images (`raw_images/`),
-
-tell me which one and I will do it.
