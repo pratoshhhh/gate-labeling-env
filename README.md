@@ -6,7 +6,7 @@ This repository contains two helper files used to convert Label Studio exports i
 - `convert_dataset.py` — converts `project_export.json` (Label Studio export) + local images into a YOLOv8-compatible dataset that embeds keypoints per object.
 - `project_export.json` — Label Studio project export (already contains detections with keypoints and YOLO-style annotations produced from labeling).
 
-This repo is intentionally minimal. The JSON contains keypoint labels (e.g., `TL`, `TR`, `BR`, `BL`) and bounding boxes; `convert_dataset.py` associates keypoints to their parent bounding boxes and emits the combined YOLO+keypoint text files.
+The JSON contains keypoint labels (e.g., `TL`, `TR`, `BR`, `BL`) and bounding boxes; `convert_dataset.py` associates keypoints to their parent bounding boxes and emits the combined YOLO+keypoint text files.
 
 Requirements
 - Python 3.8+
