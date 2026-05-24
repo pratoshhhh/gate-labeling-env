@@ -1,76 +1,76 @@
- # Gate Labeling Project
 
- This repository contains scripts and labelled data for gate pose detection and labeling using Label Studio.
+# gate-labeling-env
 
- ## Project overview
- - `convert_dataset.py`: helper to convert/export datasets
- - `label_studio_config.xml`: Label Studio labeling config
- - `project_export.json`: exported tasks for Label Studio
- - `yolov8_gate_pose/`: images and dataset structure for YOLOv8
- - `labels/`: label files for training/validation
+This repository contains two helper files used to convert Label Studio exports into a YOLOv8-style dataset with per-object keypoints:
 
- ## Requirements
- - Python 3.8+ (virtualenv recommended)
+- `convert_dataset.py` — converts `project_export.json` (Label Studio export) + local images into a YOLOv8-compatible dataset that embeds keypoints per object.
+- `project_export.json` — Label Studio project export (already contains detections with keypoints and YOLO-style annotations produced from labeling).
 
- ## Setup (Windows)
- 1. Activate the virtual environment:
+This repo is intentionally minimal. The JSON contains keypoint labels (e.g., `TL`, `TR`, `BR`, `BL`) and bounding boxes; `convert_dataset.py` associates keypoints to their parent bounding boxes and emits the combined YOLO+keypoint text files.
 
-    Powershell:
+Requirements
+- Python 3.8+
+- (optional) a virtual environment. Example:
 
-    ```powershell
-    Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
-    & label_env\Scripts\Activate.ps1
-    ```
+```powershell
+python -m venv label_env
+& label_env\Scripts\Activate.ps1
+pip install -r requirements.txt  # if you create one
+```
 
-    CMD:
+How it works
+- `convert_dataset.py` reads `project_export.json` (the Label Studio export) and expects the referenced images to be available in `raw_images/`.
+- For each task it extracts rectangle (bounding box) and keypoint annotations, assigns keypoints to the nearest/containing bounding box (labels TL/TR/BR/BL), then writes one `.txt` label file per image in `yolov8_gate_pose/labels/{train|val}/` with the following line format:
 
-    ```cmd
-    label_env\Scripts\activate.bat
-    ```
+  class cx cy w h TL_x TL_y TL_v TR_x TR_y TR_v BR_x BR_y BR_v BL_x BL_y BL_v
 
- 2. Install dependencies (if you maintain a `requirements.txt`):
+- It also copies the referenced images into `yolov8_gate_pose/images/{train|val}/` and splits the dataset with an 80/20 train/val ratio by default.
 
-    ```powershell
-    pip install -r requirements.txt
-    # or, to install Label Studio directly:
-    pip install label-studio
-    ```
+Quick usage
+1. Make sure your images referenced in `project_export.json` are located inside `raw_images/` (filenames must match the exported paths).
+2. Run the converter:
 
- ## Running Label Studio
- 1. Start Label Studio server:
+```powershell
+python convert_dataset.py
+```
 
-    ```powershell
-    label-studio start --host 0.0.0.0 --port 8080
-    ```
+On success you'll see an output like:
 
- 2. Open your browser at `http://localhost:8080` and create a new project.
- 3. To import the provided project export, use the project import UI and select `project_export.json`.
- 4. To use the labeling configuration, during project setup choose `label_studio_config.xml` as the labeling config (or paste its contents in the UI).
+```
+✓ Success! Processed all overlapping and multi-gate images.
+Output Directory Location: 'yolov8_gate_pose'
+Dataset Metrics -> Train Phase: N | Validation Phase: M
+```
 
- ## Dataset layout
- - `yolov8_gate_pose/images/train` and `yolov8_gate_pose/images/val` — images for training/validation
- - `labels/train` and `labels/val` — corresponding label files
+Using the output with YOLOv8
+- Create a simple `data.yaml` for Ultralytics YOLO training (example):
 
- ## Committing files (exclude virtualenv)
- Make sure the `label_env` virtual environment is not committed. A recommended `.gitignore` is included.
+```yaml
+path: yolov8_gate_pose
+train: images/train
+val: images/val
+nc: 1
+names: ["gate"]
+```
 
- Quick git commands (run from the repo root):
+- Install Ultralytics and train (example):
 
- ```powershell
- # Remove virtualenv from git if it was previously tracked
- git rm -r --cached label_env || $true
- # Add the README and .gitignore and commit
- git add README.md .gitignore
- git add -A
- git commit -m "Add README and .gitignore; exclude virtualenv"
- ```
+```powershell
+pip install ultralytics
+yolo task=detect mode=train model=yolov8n.pt data=data.yaml epochs=50
+```
 
- If this is a new repository, initialize first:
+Notes about keypoints
+- The produced label files include four ordered keypoints (`TL`, `TR`, `BR`, `BL`) after the standard YOLO box fields. If a keypoint is missing it's written as `0.000000 0.000000 0`.
+- If you use a custom training loop or architecture that consumes keypoints, adapt the data loader to parse the extended label format.
 
- ```powershell
- git init
- ```
+Customizing the conversion
+- Edit the top of `convert_dataset.py` to change `JSON_PATH`, `SRC_IMAGES_DIR`, `OUTPUT_DATASET_DIR`, or `TRAIN_RATIO`.
+- The script matches keypoints to boxes by containment first, then by proximity to box centers as a fallback.
 
- ## Notes
- - The virtual environment directory is `label_env/` — do not commit it.
- - If you want help generating `requirements.txt`, I can run `pip freeze` inside the venv and create it.
+If you want me to
+- generate a `requirements.txt` from your environment,
+- add an example `data.yaml` file to the repo, or
+- enable `git lfs` tracking for large images (`raw_images/`),
+
+tell me which one and I will do it.
